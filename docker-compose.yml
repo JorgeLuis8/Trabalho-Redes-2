@@ -1,0 +1,41 @@
+services:
+  servidor_sequencial:
+    build: .
+    container_name: servidor_sequencial
+    command: python3 servidor_sequencial.py
+    env_file: .env
+    ports:
+      - "8081:80"
+    networks:
+      rede:
+        ipv4_address: 8.40.0.10
+
+  servidor_concorrente:
+    build: .
+    container_name: servidor_concorrente
+    command: python3 servidor_concorrente.py
+    env_file: .env
+    ports:
+      - "8082:80"
+    networks:
+      rede:
+        ipv4_address: 8.40.0.11
+
+  cliente:
+    build: .
+    container_name: cliente
+    command: python3 executar_experimentos.py
+    depends_on:
+      - servidor_sequencial
+      - servidor_concorrente
+    env_file: .env
+    networks:
+      rede:
+        ipv4_address: 8.40.0.20
+
+networks:
+  rede:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 8.40.0.0/24
