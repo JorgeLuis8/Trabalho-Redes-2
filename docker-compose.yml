@@ -1,41 +1,41 @@
+version: "3.9"
+
 services:
-  servidor_sequencial:
+  sequential_server:
     build: .
-    container_name: servidor_sequencial
-    command: python3 servidor_sequencial.py
-    env_file: .env
+    container_name: seq_server
+    command: python sequential_server.py
     ports:
-      - "8081:80"
+      - "8080:80"            # Porta local → porta do container
     networks:
-      rede:
-        ipv4_address: 8.40.0.10
+      redes_net:
+        ipv4_address: 172.40.0.10
 
-  servidor_concorrente:
+  concurrent_server:
     build: .
-    container_name: servidor_concorrente
-    command: python3 servidor_concorrente.py
-    env_file: .env
+    container_name: conc_server
+    command: python concurrent_server.py
     ports:
-      - "8082:80"
+      - "8081:80"            # Porta local → porta do container
     networks:
-      rede:
-        ipv4_address: 8.40.0.11
+      redes_net:
+        ipv4_address: 172.40.0.11
 
-  cliente:
-    build: .
-    container_name: cliente
-    command: python3 executar_experimentos.py
-    depends_on:
-      - servidor_sequencial
-      - servidor_concorrente
-    env_file: .env
-    networks:
-      rede:
-        ipv4_address: 8.40.0.20
+  # O cliente pode ser reativado para testes de métricas se quiser
+  # client:
+  #   build: .
+  #   container_name: client
+  #   command: python test_metrics.py
+  #   depends_on:
+  #     - sequential_server
+  #     - concurrent_server
+  #   networks:
+  #     redes_net:
+  #       ipv4_address: 172.40.0.20
 
 networks:
-  rede:
+  redes_net:
     driver: bridge
     ipam:
       config:
-        - subnet: 8.40.0.0/24
+        - subnet: 172.40.0.0/24
