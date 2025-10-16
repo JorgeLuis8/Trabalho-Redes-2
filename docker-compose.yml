@@ -26,11 +26,12 @@ services:
     depends_on:
       - sequential_server
       - concurrent_server
+    # 🔹 Monta a pasta local "resultados" no container
+    volumes:
+      - ./resultados:/app/resultados
     networks:
       redes_net:
         ipv4_address: 172.40.0.20
-    environment:
-      - PYTHONUNBUFFERED=1
 
 networks:
   redes_net:

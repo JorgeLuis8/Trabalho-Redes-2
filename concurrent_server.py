@@ -70,23 +70,18 @@ def processar_requisicao(data):
 
         if metodo == "OPTIONS":
             return montar_resposta_http(204, "", metodo)
-
         elif metodo == "GET":
             html = montar_html("Servidor Concorrente - GET", "Recurso obtido com sucesso!")
             return montar_resposta_http(200, html)
-
         elif metodo == "POST":
             html = montar_html("Servidor Concorrente - POST", "Novo recurso criado com sucesso!")
             return montar_resposta_http(201, html)
-
         elif metodo == "PUT":
             html = montar_html("Servidor Concorrente - PUT", "Recurso atualizado com sucesso!")
             return montar_resposta_http(200, html)
-
         else:
             html = montar_html("Erro", f"Método {metodo} não suportado.")
             return montar_resposta_http(400, html)
-
     except Exception as e:
         html = montar_html("Erro Interno", str(e))
         return montar_resposta_http(500, html)
