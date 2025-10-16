@@ -1,95 +1,51 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-br">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8">
   <title>Teste de Servidores HTTP</title>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      background-color: #f4f7f8;
-      margin: 0;
-      padding: 20px;
-    }
-    h1 {
-      color: #333;
-      text-align: center;
-    }
-    .server-section {
-      background: #fff;
-      border-radius: 10px;
-      padding: 20px;
-      margin: 20px auto;
-      max-width: 600px;
-      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-    }
-    .server-title {
-      font-size: 20px;
-      color: #0066cc;
-      margin-bottom: 10px;
-    }
-    button {
-      margin: 5px;
-      padding: 10px 15px;
-      font-size: 14px;
-      cursor: pointer;
-      border-radius: 6px;
-      border: none;
-      color: #fff;
-    }
-    button.get { background-color: #2196F3; }
-    button.post { background-color: #4CAF50; }
-    button.put { background-color: #FF9800; }
-    pre {
-      background-color: #f0f0f0;
-      padding: 10px;
-      border-radius: 8px;
-      overflow-x: auto;
-    }
-    .response {
-      margin-top: 10px;
-    }
+    body { font-family: Arial; background: #f7f7f7; margin: 40px; }
+    .server-box { border: 2px solid #ccc; border-radius: 10px; padding: 20px; margin: 20px 0; background: white; }
+    button { margin: 5px; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; }
+    .seq button { background: #007BFF; color: white; }
+    .conc button { background: #28A745; color: white; }
+    pre { background: #f0f0f0; padding: 10px; border-radius: 5px; overflow-x: auto; }
   </style>
 </head>
 <body>
+  <h1>Testes de Servidores HTTP</h1>
 
-  <h1>🌐 Teste de Servidores HTTP</h1>
-
-  <div class="server-section" id="seq">
-    <div class="server-title">Servidor SEQUENCIAL (localhost:8080)</div>
-    <button class="get" onclick="enviar('GET', 'http://localhost:8080', 'seqResp')">GET</button>
-    <button class="post" onclick="enviar('POST', 'http://localhost:8080', 'seqResp')">POST</button>
-    <button class="put" onclick="enviar('PUT', 'http://localhost:8080', 'seqResp')">PUT</button>
-    <div class="response" id="seqResp"><em>Nenhuma requisição enviada ainda.</em></div>
+  <div class="server-box seq">
+    <h2>Servidor Sequencial (localhost:8080)</h2>
+    <button onclick="enviar('GET', '8080')">GET</button>
+    <button onclick="enviar('POST', '8080')">POST</button>
+    <button onclick="enviar('PUT', '8080')">PUT</button>
+    <pre id="res8080"></pre>
   </div>
 
-  <div class="server-section" id="conc">
-    <div class="server-title">Servidor CONCORRENTE (localhost:8081)</div>
-    <button class="get" onclick="enviar('GET', 'http://localhost:8081', 'concResp')">GET</button>
-    <button class="post" onclick="enviar('POST', 'http://localhost:8081', 'concResp')">POST</button>
-    <button class="put" onclick="enviar('PUT', 'http://localhost:8081', 'concResp')">PUT</button>
-    <div class="response" id="concResp"><em>Nenhuma requisição enviada ainda.</em></div>
+  <div class="server-box conc">
+    <h2>Servidor Concorrente (localhost:8081)</h2>
+    <button onclick="enviar('GET', '8081')">GET</button>
+    <button onclick="enviar('POST', '8081')">POST</button>
+    <button onclick="enviar('PUT', '8081')">PUT</button>
+    <pre id="res8081"></pre>
   </div>
 
   <script>
-    async function enviar(metodo, url, idResposta) {
-      const respDiv = document.getElementById(idResposta);
-      respDiv.innerHTML = `<b>Enviando ${metodo} para ${url}...</b>`;
-
+    async function enviar(metodo, porta) {
+      const url = `http://localhost:${porta}/`;
       try {
+        const inicio = performance.now();
         const resp = await fetch(url, { method: metodo });
-        const text = await resp.text();
-        respDiv.innerHTML = `
-          <p><b>Método:</b> ${metodo}</p>
-          <p><b>Servidor:</b> ${url}</p>
-          <p><b>Status:</b> ${resp.status} ${resp.statusText}</p>
-          <p><b>Resposta:</b></p>
-          <pre>${text.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</pre>
-        `;
+        const texto = await resp.text();
+        const fim = performance.now();
+
+        document.getElementById(`res${porta}`).textContent =
+          `Método: ${metodo}\nServidor: ${url}\nStatus: ${resp.status} ${resp.statusText}\nTempo: ${(fim - inicio).toFixed(2)}ms\n\nResposta:\n${texto}`;
       } catch (e) {
-        respDiv.innerHTML = `<b>Erro:</b> ${e}`;
+        document.getElementById(`res${porta}`).textContent = "❌ Erro: " + e.message;
       }
     }
   </script>
-
 </body>
 </html>

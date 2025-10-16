@@ -1,12 +1,10 @@
-version: "3.9"
-
 services:
   sequential_server:
     build: .
     container_name: seq_server
     command: python sequential_server.py
     ports:
-      - "8080:80"            # Porta local → porta do container
+      - "8080:80"
     networks:
       redes_net:
         ipv4_address: 172.40.0.10
@@ -16,22 +14,23 @@ services:
     container_name: conc_server
     command: python concurrent_server.py
     ports:
-      - "8081:80"            # Porta local → porta do container
+      - "8081:80"
     networks:
       redes_net:
         ipv4_address: 172.40.0.11
 
-  # O cliente pode ser reativado para testes de métricas se quiser
-  # client:
-  #   build: .
-  #   container_name: client
-  #   command: python test_metrics.py
-  #   depends_on:
-  #     - sequential_server
-  #     - concurrent_server
-  #   networks:
-  #     redes_net:
-  #       ipv4_address: 172.40.0.20
+  client:
+    build: .
+    container_name: client
+    command: python test_metrics.py
+    depends_on:
+      - sequential_server
+      - concurrent_server
+    networks:
+      redes_net:
+        ipv4_address: 172.40.0.20
+    environment:
+      - PYTHONUNBUFFERED=1
 
 networks:
   redes_net:

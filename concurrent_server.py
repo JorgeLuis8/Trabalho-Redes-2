@@ -15,7 +15,7 @@ def montar_html(titulo, corpo):
     <head>
         <title>{titulo}</title>
         <style>
-            body {{ font-family: Arial; background-color: #fdfdfd; margin: 30px; color: #333; }}
+            body {{ font-family: Arial; background-color: #f9f9f9; margin: 30px; color: #333; }}
             h1 {{ color: #008000; }}
         </style>
     </head>
@@ -44,14 +44,13 @@ def montar_resposta_http(status_code, html, metodo="GET"):
         "Access-Control-Allow-Headers: Content-Type\r\n"
     )
 
-    if metodo == "OPTIONS":  # Preflight
-        resposta = (
+    if metodo == "OPTIONS":
+        return (
             f"HTTP/1.1 204 No Content\r\n"
             f"{cors_headers}"
             "Content-Length: 0\r\n"
             "Connection: close\r\n\r\n"
-        )
-        return resposta.encode()
+        ).encode()
 
     resposta = (
         f"HTTP/1.1 {status_code} {status_text}\r\n"
@@ -59,8 +58,7 @@ def montar_resposta_http(status_code, html, metodo="GET"):
         f"{cors_headers}"
         "Content-Type: text/html; charset=utf-8\r\n"
         f"Content-Length: {len(html.encode())}\r\n"
-        "Connection: close\r\n"
-        "\r\n"
+        "Connection: close\r\n\r\n"
         f"{html}"
     )
     return resposta.encode()
@@ -74,15 +72,15 @@ def processar_requisicao(data):
             return montar_resposta_http(204, "", metodo)
 
         elif metodo == "GET":
-            html = montar_html("Requisição GET", "Recurso obtido com sucesso!")
+            html = montar_html("Servidor Concorrente - GET", "Recurso obtido com sucesso!")
             return montar_resposta_http(200, html)
 
         elif metodo == "POST":
-            html = montar_html("Requisição POST", "Novo recurso criado com sucesso!")
+            html = montar_html("Servidor Concorrente - POST", "Novo recurso criado com sucesso!")
             return montar_resposta_http(201, html)
 
         elif metodo == "PUT":
-            html = montar_html("Requisição PUT", "Recurso atualizado com sucesso!")
+            html = montar_html("Servidor Concorrente - PUT", "Recurso atualizado com sucesso!")
             return montar_resposta_http(200, html)
 
         else:
@@ -96,6 +94,8 @@ def processar_requisicao(data):
 def handle_client(conn, addr):
     data = conn.recv(2048).decode()
     if data:
+        print(f"\n===================== REQUISIÇÃO DE {addr} ======================")
+        print(data)
         resposta = processar_requisicao(data)
         conn.sendall(resposta)
     conn.close()
