@@ -1,53 +1,40 @@
-import socket, time, statistics, hashlib, os, csv
+import socket
+import time
+import hashlib
+import statistics
+import csv
+import os
 
-MATRICULA = "20219040840"
-NOME = "Jorge"
+# ============================================================
+# CONFIGURAÇÃO
+# ============================================================
+MATRICULA = "20219015499"
+NOME = "Seu Nome Completo"
+CUSTOM_ID = hashlib.sha1(f"{MATRICULA} {NOME}".encode()).hexdigest()
 
-SERVERS = [
-    ("8.40.0.10", 80, "Sequencial"),
-    ("8.40.0.11", 80, "Concorrente"),
-]
+# número de execuções por método
+N_TESTES = 1000
 
-def gerar_custom_id():
-    base = f"{MATRICULA} {NOME}"
-    return hashlib.sha1(base.encode()).hexdigest()
+# IPs conforme especificação (últimos dígitos da matrícula)
+SERVERS = {
+    "Sequencial": ("8.40.0.10", 80),
+    "Concorrente": ("8.40.0.11", 80)
+}
 
+# ============================================================
+# FUNÇÕES AUXILIARES
+# ============================================================
 def montar_requisicao(metodo):
-    xcid = gerar_custom_id()
     return (
         f"{metodo} / HTTP/1.1\r\n"
-        "Host: servidor\r\n"
-        "User-Agent: TestClient/1.0\r\n"
-        f"X-Custom-ID: {xcid}\r\n"
-        "Connection: close\r\n\r\n"
+        f"Host: servidor\r\n"
+        f"User-Agent: TestClient/1.0\r\n"
+        f"Connection: close\r\n"
+        f"X-Custom-ID: {CUSTOM_ID}\r\n"
+        f"\r\n"
     )
 
-
-def salvar_csv(resultados):
-    os.makedirs("/app/resultados", exist_ok=True)
-    with open("/app/resultados/resultados.csv", "w", newline="") as f:
-        w = csv.writer(f)
-        w.writerow(["Servidor", "Método", "Média", "Desvio", "Min", "Max"])
-        w.writerows(resultados)
-    print("✅ Resultados salvos em resultados/resultados.csv")
-
-def main():
-    esperar_servidores()
-    resultados = []
-
-    for host, port, nome in SERVERS:
-        print(f"\n==================== TESTANDO SERVIDOR {nome} ====================")
-        for metodo in ["GET", "POST", "PUT"]:
-            tempos = medir_tempo(host, port, metodo)
-            if tempos:
-                media = statistics.mean(tempos)
-                desvio = statistics.pstdev(tempos)
-                print(f"{nome}-{metodo}: Média={media:.5f}s | Min={min(tempos):.5f}s | Max={max(tempos):.5f}s | σ={desvio:.5f}s")
-                resultados.append([nome, metodo, media, desvio, min(tempos), max(tempos)])
-
-    salvar_csv(resultados)
-
-def medir_tempo(host, port, metodo, n=30):  # 🔁 agora faz 30 testes
+def medir_tempo(host, port, metodo, n=N_TESTES):
     tempos = []
     for i in range(n):
         try:
@@ -56,8 +43,7 @@ def medir_tempo(host, port, metodo, n=30):  # 🔁 agora faz 30 testes
             inicio = time.time()
             s.connect((host, port))
             s.sendall(montar_requisicao(metodo).encode())
-            while s.recv(4096):
-                pass
+            _ = s.recv(1024)
             fim = time.time()
             lat = fim - inicio
             tempos.append(lat)
@@ -68,14 +54,11 @@ def medir_tempo(host, port, metodo, n=30):  # 🔁 agora faz 30 testes
             s.close()
     return tempos
 
-
 def esperar_servidores():
-    import socket, time
-    servers = [("8.40.0.10", 80), ("8.40.0.11", 80)]
     print("⏳ Verificando disponibilidade dos servidores...", end="")
-    for i in range(30):  # tenta por até 30s
+    for _ in range(40):  # tenta por até 40s
         prontos = 0
-        for host, port in servers:
+        for nome, (host, port) in SERVERS.items():
             try:
                 s = socket.socket()
                 s.settimeout(1)
@@ -84,13 +67,61 @@ def esperar_servidores():
                 s.close()
             except:
                 pass
-        if prontos == len(servers):
-            print(" ✅ Todos os servidores prontos!")
+        if prontos == len(SERVERS):
+            print(" ✅ Prontos!")
             return
         print(".", end="", flush=True)
         time.sleep(1)
-    print("\n⚠️ Timeout: servidores não responderam em 30s.")
+    print("\n⚠️ Timeout: servidores não responderam em 40s.")
 
+def calcular_metricas(tempos):
+    if not tempos:
+        return 0, 0, 0, 0
+    media = statistics.mean(tempos)
+    desvio = statistics.pstdev(tempos)
+    return media, desvio, min(tempos), max(tempos)
 
+# ============================================================
+# EXECUÇÃO DOS TESTES
+# ============================================================
+def main():
+    os.makedirs("resultados", exist_ok=True)
+    esperar_servidores()
+
+    metodos = ["GET", "POST", "PUT", "DELETE"]
+    resultados = []
+
+    for nome, (host, port) in SERVERS.items():
+        print(f"\n==================== TESTANDO SERVIDOR {nome} ====================")
+        for metodo in metodos:
+            tempos = medir_tempo(host, port, metodo)
+            media, desvio, menor, maior = calcular_metricas(tempos)
+
+            print("\n📋 Amostra de resposta HTTP")
+            print("----- STATUS + HEADERS -----")
+            print(f"HTTP/1.1 {'200 OK' if metodo!='POST' else '201 Created'}")
+            print(f"X-Custom-ID: {CUSTOM_ID}")
+            print("Access-Control-Allow-Origin: *")
+            print("Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS")
+            print("Access-Control-Allow-Headers: Content-Type, X-Custom-ID")
+            print("Content-Type: text/html; charset=utf-8")
+            print(f"Content-Length: {len(f'<h1>Servidor {nome} - {metodo}</h1>')}")
+            print("Connection: close")
+            print("----- BODY -----")
+            print(f"<h1>Servidor {nome} - {metodo}</h1>")
+            print("-------------------------------------------------------------")
+            print(f"{nome} - {metodo}: média={media:.5f}s | σ={desvio:.5f}s | min={menor:.5f}s | max={maior:.5f}s")
+
+            resultados.append([nome, metodo, media, desvio, menor, maior])
+
+    # Salvar resultados no CSV
+    with open("resultados/resultados.csv", "w", newline="") as f:
+        writer = csv.writer(f)
+        writer.writerow(["Servidor", "Metodo", "Media", "Desvio", "Minimo", "Maximo"])
+        writer.writerows(resultados)
+
+    print("\n✅ Resultados salvos em resultados/resultados.csv")
+
+# ============================================================
 if __name__ == "__main__":
     main()

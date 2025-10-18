@@ -1,4 +1,4 @@
-# --- Servidor e Cliente baseados em Ubuntu ---
+# Base Ubuntu exigida no enunciado
 FROM ubuntu:22.04
 
 ENV DEBIAN_FRONTEND=noninteractive

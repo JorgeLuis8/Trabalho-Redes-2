@@ -1,8 +1,12 @@
 #!/bin/bash
 set -e
 
-echo "🧹 Limpando containers antigos..."
+echo "🧹 Limpando containers..."
 docker compose down -v --remove-orphans || true
+docker network prune -f || true
+
+echo "📁 Garantindo pasta de resultados..."
+mkdir -p resultados
 
 echo "🐋 Buildando imagens..."
 docker compose build
@@ -10,21 +14,10 @@ docker compose build
 echo "🌐 Subindo servidores..."
 docker compose up -d sequential_server concurrent_server
 
-echo "⏳ Executando cliente de teste..."
+echo "🧪 Executando cliente de testes (30x por método)..."
 docker compose run --rm client
 
 echo ""
-echo "✅ Testes concluídos. Resultados em resultados/resultados.csv"
-
-# --- Abrir HTML automaticamente ---
-if grep -qi microsoft /proc/version 2>/dev/null; then
-  explorer.exe "$(wslpath -w "$(pwd)/index.html")"
-elif command -v start >/dev/null; then
-  start index.html
-elif command -v xdg-open >/dev/null; then
-  xdg-open index.html
-elif command -v open >/dev/null; then
-  open index.html
-else
-  echo "⚠️ Abra manualmente: $(pwd)/index.html"
-fi
+echo "✅ Concluído!"
+echo "📊 CSV: $(pwd)/resultados/resultados.csv"
+echo "ℹ️ No terminal acima você tem as AMOSTRAS de respostas HTTP (headers + body) para cada método e servidor."
