@@ -1,49 +1,70 @@
 <!DOCTYPE html>
-<html lang="pt-br">
+<html lang="pt-BR">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Teste de Servidores HTTP</title>
   <style>
-    body { font-family: Arial; background: #f7f7f7; margin: 40px; }
-    .server-box { border: 2px solid #ccc; border-radius: 10px; padding: 20px; margin: 20px 0; background: white; }
-    button { margin: 5px; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; }
-    .seq button { background: #007BFF; color: white; }
-    .conc button { background: #28A745; color: white; }
-    pre { background: #f0f0f0; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    body {
+      font-family: Arial, sans-serif;
+      background: #f5f5f5;
+      text-align: center;
+      margin: 40px;
+    }
+    h1 { color: #333; }
+    button {
+      margin: 10px;
+      padding: 10px 20px;
+      border: none;
+      cursor: pointer;
+      border-radius: 8px;
+      color: white;
+    }
+    .seq { background-color: #007bff; }
+    .conc { background-color: #28a745; }
+    pre {
+      background: #222;
+      color: #0f0;
+      text-align: left;
+      padding: 10px;
+      border-radius: 6px;
+      max-width: 800px;
+      margin: 20px auto;
+      overflow-x: auto;
+    }
   </style>
 </head>
 <body>
-  <h1>Testes de Servidores HTTP</h1>
+  <h1>🌐 Teste de Servidores HTTP</h1>
+  <p>Clique em um botão para enviar uma requisição HTTP.</p>
 
-  <div class="server-box seq">
-    <h2>Servidor Sequencial (localhost:8080)</h2>
-    <button onclick="enviar('GET', '8080')">GET</button>
-    <button onclick="enviar('POST', '8080')">POST</button>
-    <button onclick="enviar('PUT', '8080')">PUT</button>
-    <pre id="res8080"></pre>
+  <div>
+    <h2>Servidor Sequencial (porta 8080)</h2>
+    <button class="seq" onclick="enviar('GET', 8080)">GET</button>
+    <button class="seq" onclick="enviar('POST', 8080)">POST</button>
+    <button class="seq" onclick="enviar('PUT', 8080)">PUT</button>
   </div>
 
-  <div class="server-box conc">
-    <h2>Servidor Concorrente (localhost:8081)</h2>
-    <button onclick="enviar('GET', '8081')">GET</button>
-    <button onclick="enviar('POST', '8081')">POST</button>
-    <button onclick="enviar('PUT', '8081')">PUT</button>
-    <pre id="res8081"></pre>
+  <div>
+    <h2>Servidor Concorrente (porta 8081)</h2>
+    <button class="conc" onclick="enviar('GET', 8081)">GET</button>
+    <button class="conc" onclick="enviar('POST', 8081)">POST</button>
+    <button class="conc" onclick="enviar('PUT', 8081)">PUT</button>
   </div>
+
+  <h2>📜 Resposta:</h2>
+  <pre id="saida">Aguardando ação...</pre>
 
   <script>
     async function enviar(metodo, porta) {
-      const url = `http://localhost:${porta}/`;
+      const saida = document.getElementById("saida");
+      saida.textContent = `Enviando ${metodo} para localhost:${porta}...`;
       try {
-        const inicio = performance.now();
-        const resp = await fetch(url, { method: metodo });
+        const resp = await fetch(`http://localhost:${porta}/`, { method: metodo });
         const texto = await resp.text();
-        const fim = performance.now();
-
-        document.getElementById(`res${porta}`).textContent =
-          `Método: ${metodo}\nServidor: ${url}\nStatus: ${resp.status} ${resp.statusText}\nTempo: ${(fim - inicio).toFixed(2)}ms\n\nResposta:\n${texto}`;
-      } catch (e) {
-        document.getElementById(`res${porta}`).textContent = "❌ Erro: " + e.message;
+        saida.textContent = `✅ ${metodo} ${porta} OK\n\n${texto}`;
+      } catch (err) {
+        saida.textContent = `❌ Erro ao conectar com servidor ${porta}: ${err}`;
       }
     }
   </script>

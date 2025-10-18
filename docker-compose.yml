@@ -2,40 +2,39 @@ services:
   sequential_server:
     build: .
     container_name: seq_server
-    command: python sequential_server.py
+    command: python3 sequential_server.py
     ports:
       - "8080:80"
     networks:
       redes_net:
-        ipv4_address: 172.40.0.10
+        ipv4_address: 8.40.0.10
 
   concurrent_server:
     build: .
     container_name: conc_server
-    command: python concurrent_server.py
+    command: python3 concurrent_server.py
     ports:
       - "8081:80"
     networks:
       redes_net:
-        ipv4_address: 172.40.0.11
+        ipv4_address: 8.40.0.11
 
   client:
     build: .
     container_name: client
-    command: python test_metrics.py
+    command: python3 test_metrics.py
     depends_on:
       - sequential_server
       - concurrent_server
-    # 🔹 Monta a pasta local "resultados" no container
     volumes:
       - ./resultados:/app/resultados
     networks:
       redes_net:
-        ipv4_address: 172.40.0.20
+        ipv4_address: 8.40.0.20
 
 networks:
   redes_net:
     driver: bridge
     ipam:
       config:
-        - subnet: 172.40.0.0/24
+        - subnet: 8.40.0.0/24
