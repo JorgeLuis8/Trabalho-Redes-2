@@ -1,97 +1,183 @@
-# 🧪 Projeto — Servidores Web Sequencial e Concorrente
+# Trabalho de Redes II — Servidor Web Sequencial vs Concorrente
 
-**Disciplina:** Redes de Computadores II — UFPI  
-**Autor:** Jorge Luis Ferreira Luz — Matrícula 20219040840
-
----
-
-## 🎯 Objetivo
-
-Implementar e comparar o desempenho entre um **servidor web sequencial** e um **concorrente** utilizando **Python + Sockets (TCP)** e **mensagens HTTP**.
+**Disciplina:** Redes de Computadores II  
+**Curso:** Bacharelado em Sistemas de Informação — UFPI  
+**Aluno:** Jorge Luis Ferreira Luz  
+**Matrícula:** 20219040840
 
 ---
 
-## 🧩 Estrutura do Projeto
+## Objetivo
+
+Implementar dois servidores web (Sequencial e Concorrente) para comparar desempenho e comportamento entre abordagens síncrona e paralela. A comunicação segue o protocolo HTTP via sockets TCP, sem uso de frameworks como Flask, FastAPI ou Django.
+
+---
+
+## Estrutura do Projeto
 ```
 Trabalho-Redes-2/
-├── sequential_server.py
-├── concurrent_server.py
-├── test_metrics.py
+│
 ├── docker-compose.yml
-├── run_all.sh
-└── resultados/
-    └── resultados.csv
+├── Dockerfile
+│
+├── sequential_server.py      # Servidor Sequencial (porta 8080)
+├── concurrent_server.py      # Servidor Concorrente (porta 8081)
+├── client.py                 # Cliente automatizado de testes (métricas)
+│
+├── index.html                # Painel Web (UI para enviar requisições e medir latência)
+└── resultados/               # Pasta gerada com resultados CSV
 ```
 
 ---
 
-## 🐳 Execução Automática
+## Tecnologias Utilizadas
 
-### 1️⃣ Dê permissão ao script:
+- **Python 3** (sockets, threading, hashlib)
+- **HTTP via TCP puro**
+- **Docker + Docker Compose** (simulação da rede)
+- **HTML + JavaScript** (para o painel de testes)
+- **SHA-1** (para gerar o cabeçalho criptográfico `X-Custom-ID`)
+
+---
+
+## Cabeçalho HTTP Personalizado (`X-Custom-ID`)
+
+Cada requisição inclui um cabeçalho obrigatório calculado com:
+```python
+CUSTOM_ID = hashlib.sha1(f"{MATRICULA} {NOME}".encode()).hexdigest()
+```
+
+**Exemplo real:**
+```python
+MATRICULA = "20219040840"
+NOME = "Jorge Luis Ferreira Luz"
+X-Custom-ID: 8b33d991b6c4c6b80c1eec8ce2a03df00d39a4a4
+```
+
+O servidor valida a presença desse campo e retorna o mesmo valor no cabeçalho da resposta.
+
+---
+
+## Endereçamento da Rede Docker
+
+A sub-rede foi configurada com base nos quatro últimos dígitos da matrícula (0840):
+```
+Sub-rede: 8.40.0.0/24
+```
+
+| Container    | IP        | Porta | Descrição              |
+|--------------|-----------|-------|------------------------|
+| client       | 8.40.0.2  | —     | Envia requisições e coleta métricas |
+| seq_server   | 8.40.0.10 | 8080  | Servidor Sequencial    |
+| conc_server  | 8.40.0.11 | 8081  | Servidor Concorrente   |
+
+---
+
+## Como Executar Tudo
+
+### 1. Construir e iniciar os containers
+
+No terminal, dentro da pasta do projeto:
 ```bash
-chmod +x run_all.sh
+docker compose up --build
 ```
 
-### 2️⃣ Execute todos os testes:
+Isso cria os três containers: `client`, `seq_server` e `conc_server`.
+
+### 2. Executar o cliente de testes
+
+Após os servidores iniciarem, entre no container do cliente:
 ```bash
-./run_all.sh
+docker exec -it client bash
 ```
 
-### O script realiza:
+E rode:
+```bash
+python3 client.py
+```
 
-- ✅ Limpeza de containers antigos
-- ✅ Build e inicialização dos servidores
-- ✅ Execução do cliente de teste
-- ✅ Salvamento das métricas de latência em `resultados/resultados.csv`
+O cliente enviará várias requisições `GET`, `POST`, `PUT`, `DELETE` para ambos os servidores, registrando:
+
+- tempo médio (s)
+- desvio padrão
+- mínimo e máximo
+
+Os resultados são salvos automaticamente em:
+```
+resultados/resultados.csv
+```
+
+### 3. Rodar o painel web (manual)
+
+Abra o arquivo `index.html` manualmente no navegador.
+
+> **Dica:** Se estiver usando VS Code, use "Go Live" ou "Live Server" para abrir em `http://127.0.0.1:5500/index.html`.
+
+Esse painel envia requisições diretamente para:
+
+- `http://localhost:8080` → servidor sequencial
+- `http://localhost:8081` → servidor concorrente
+
+e exibe:
+
+- tempo médio por método
+- desvio padrão
+- logs e resposta HTTP completas (status, cabeçalhos, corpo)
+
+> **Nota:** O `index.html` não é aberto automaticamente pelo script, deve ser aberto manualmente no navegador.
 
 ---
 
-## 📈 Métricas Coletadas
+## Métricas Geradas
 
-| Métrica | Descrição |
-|---------|-----------|
-| **Média** | Tempo médio de resposta por método |
-| **Desvio Padrão** | Variação do tempo médio |
-| **Latência Mínima** | Menor tempo observado |
-| **Latência Máxima** | Maior tempo observado |
-
----
-
-## 🧮 Formato dos Resultados
-
-O arquivo `resultados/resultados.csv` contém as seguintes colunas:
+Cada execução gera uma linha no CSV com:
 ```csv
-Servidor,Metodo,Media,Desvio,Min,Max
-Sequencial,GET,0.00023,0.00004,0.00019,0.00030
-Concorrente,GET,0.00112,0.00058,0.00046,0.00281
-...
+Servidor,Metodo,Media,DesvioPadrao,Min,Max,N
+Sequencial,GET,0.001500,0.000210,0.001200,0.001700,30
+Concorrente,POST,0.000800,0.000150,0.000600,0.001000,30
 ```
 
----
+Esses valores são usados para:
 
-## 🌐 Acesso Manual aos Servidores
-
-| Servidor | URL |
-|----------|-----|
-| **Sequencial** | http://localhost:8080 |
-| **Concorrente** | http://localhost:8081 |
+- gerar gráficos de comparação
+- calcular médias e desvios padrão
+- identificar o cenário de melhor desempenho
 
 ---
 
-## 🧾 Observações
+## CORS e Validação
 
-- 📁 Todos os resultados são salvos em: `resultados/`
-- 🔄 O script gerencia automaticamente o ciclo completo de teste
-- 📊 Os dados são persistidos para análise posterior
+Os servidores incluem os cabeçalhos obrigatórios para permitir chamadas do navegador (`index.html`):
+```
+Access-Control-Allow-Origin: *
+Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS
+Access-Control-Allow-Headers: Content-Type, X-Custom-ID
+Access-Control-Expose-Headers: X-Custom-ID, Content-Type, Content-Length
+```
+
+E validam o `X-Custom-ID`, respondendo `400 Bad Request` caso esteja ausente.
 
 ---
 
-## 🚀 Execução Rápida
+## Comandos Úteis
+
+**Parar containers:**
 ```bash
-./run_all.sh
+docker compose down
 ```
 
-**Resultado esperado:**  
-Arquivo gerado em `Trabalho-Redes-2/resultados/resultados.csv` com todas as métricas coletadas.
+**Ver logs:**
+```bash
+docker logs seq_server
+docker logs conc_server
+docker logs client
+```
+
+**Remover redes antigas:**
+```bash
+docker network prune -f
+```
 
 ---
+
+**Desenvolvido para a disciplina de Redes de Computadores II - UFPI**
