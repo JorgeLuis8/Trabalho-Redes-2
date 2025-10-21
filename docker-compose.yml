@@ -1,36 +1,44 @@
+version: "3.9"
+
 services:
-  sequential_server:
-    build: .
+  seq_server:
+    build:
+      context: .
+      dockerfile: Dockerfile
     container_name: seq_server
-    command: python3 sequential_server.py
-    ports:
-      - "8080:80"
+    command: ["python3", "sequential_server.py"]
     networks:
       redes_net:
         ipv4_address: 8.40.0.10
-
-  concurrent_server:
-    build: .
-    container_name: conc_server
-    command: python3 concurrent_server.py
     ports:
-      - "8081:80"
+      - "8080:80"
+
+  conc_server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: conc_server
+    command: ["python3", "concurrent_server.py"]
     networks:
       redes_net:
         ipv4_address: 8.40.0.11
+    ports:
+      - "8081:80"
 
   client:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile
     container_name: client
-    command: python3 test_metrics.py
     depends_on:
-      - sequential_server
-      - concurrent_server
-    volumes:
-      - ./resultados:/app/resultados
+      - seq_server
+      - conc_server
+    command: ["python3", "client.py"]
     networks:
       redes_net:
         ipv4_address: 8.40.0.20
+    volumes:
+      - ./resultados:/app/resultados
 
 networks:
   redes_net:

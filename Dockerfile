@@ -1,13 +1,13 @@
-# Base Ubuntu exigida no enunciado
 FROM ubuntu:22.04
 
-ENV DEBIAN_FRONTEND=noninteractive
-
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    python3 python3-pip ca-certificates curl && \
-    rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y \
+      python3 python3-pip python3-venv \
+      gcc \
+    && pip3 install --no-cache-dir matplotlib \
+    && apt-get clean
 
 WORKDIR /app
-COPY . /app/
+COPY . /app
 
-CMD ["bash"]
+EXPOSE 80
+CMD ["python3"]

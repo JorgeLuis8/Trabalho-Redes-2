@@ -1,23 +1,27 @@
-#!/bin/bash
-set -e
+#!/usr/bin/env bash
+set -euo pipefail
 
-echo "🧹 Limpando containers..."
-docker compose down -v --remove-orphans || true
+echo "🧹 Limpando possíveis redes antigas (opcional)..."
 docker network prune -f || true
 
-echo "📁 Garantindo pasta de resultados..."
-mkdir -p resultados
-
-echo "🐋 Buildando imagens..."
+echo "🧱 Buildando imagens..."
 docker compose build
 
-echo "🌐 Subindo servidores..."
-docker compose up -d sequential_server concurrent_server
+echo "🚀 Subindo servidores em background..."
+docker compose up -d seq_server conc_server
 
-echo "🧪 Executando cliente de testes (30x por método)..."
+echo "⏳ Aguardando 3s..."
+sleep 3
+
+echo "🧪 Executando cliente (testes + métricas)..."
 docker compose run --rm client
 
-echo ""
-echo "✅ Concluído!"
-echo "📊 CSV: $(pwd)/resultados/resultados.csv"
-echo "ℹ️ No terminal acima você tem as AMOSTRAS de respostas HTTP (headers + body) para cada método e servidor."
+echo "📈 Gerando gráfico..."
+docker compose run --rm client python3 plot_results.py
+
+echo "✅ Concluído. Veja arquivos em ./resultados/"
+echo " - resultados.csv"
+echo " - grafico_latency.png"
+
+echo "🛑 (Opcional) Parar servidores: docker compose down"
+chmod -R a+rw resultados || true

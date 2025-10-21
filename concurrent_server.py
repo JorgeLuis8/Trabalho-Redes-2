@@ -1,54 +1,91 @@
-import socket, threading, hashlib
+import socket
+import threading
 
-HOST, PORT = "0.0.0.0", 80
+HOST = "0.0.0.0"
+PORT = 80
+ALLOWED = {"GET", "POST", "PUT", "DELETE", "OPTIONS"}
 
-def gerar_custom_id():
-    base = "20219040840 Jorge"
-    return hashlib.sha1(base.encode()).hexdigest()
 
-def resposta_http(status, body):
-    headers = (
-        f"HTTP/1.1 {status}\r\n"
-        f"X-Custom-ID: {gerar_custom_id()}\r\n"
-        "Access-Control-Allow-Origin: *\r\n"
-        "Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS\r\n"
-        "Access-Control-Allow-Headers: Content-Type, X-Custom-ID\r\n"
-        "Content-Type: text/html; charset=utf-8\r\n"
-        f"Content-Length: {len(body.encode())}\r\n"
-        "Connection: close\r\n\r\n"
-    )
-    return (headers + body).encode()
+def http_response(status_line: str, headers: dict, body: str = "") -> bytes:
+    # 🔹 Cabeçalhos CORS obrigatórios
+    cors_headers = {
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type, X-Custom-ID",
+        "Access-Control-Expose-Headers": "X-Custom-ID, Content-Type, Content-Length",
+    }
+    headers.update(cors_headers)
 
-def processar(data: str) -> bytes:
-    linha = data.split("\r\n")[0]
-    metodo = (linha.split(" ") + ["", ""])[0]
+    head = status_line + "\r\n" + "".join(f"{k}: {v}\r\n" for k, v in headers.items())
+    if body:
+        head += f"Content-Length: {len(body.encode('utf-8'))}\r\n"
+        head += "Content-Type: text/html; charset=utf-8\r\n"
+    head += "Connection: close\r\n\r\n"
+    return (head + body).encode("utf-8")
 
-    if metodo == "OPTIONS":
-        return resposta_http("204 No Content", "")
-    if metodo == "GET":
-        return resposta_http("200 OK", "<h1>Servidor Concorrente - GET</h1>")
-    if metodo == "POST":
-        return resposta_http("201 Created", "<h1>Servidor Concorrente - POST</h1>")
-    if metodo == "PUT":
-        return resposta_http("200 OK", "<h1>Servidor Concorrente - PUT</h1>")
-    if metodo == "DELETE":
-        return resposta_http("200 OK", "<h1>Servidor Concorrente - DELETE</h1>")
-    return resposta_http("405 Method Not Allowed", "<h1>Método não suportado</h1>")
+
+def build_ok(method: str, xcid: str) -> bytes:
+    body = f"<h1>Servidor Concorrente - {method}</h1>"
+    headers = {"X-Custom-ID": xcid}
+    return http_response("HTTP/1.1 200 OK", headers, body)
+
+
+def build_bad_request(msg: str) -> bytes:
+    body = f"<h1>400 Bad Request</h1><p>{msg}</p>"
+    return http_response("HTTP/1.1 400 Bad Request", {}, body)
+
+
+def build_method_not_allowed() -> bytes:
+    body = "<h1>405 Method Not Allowed</h1>"
+    return http_response("HTTP/1.1 405 Method Not Allowed", {}, body)
+
+
+def build_options(xcid: str) -> bytes:
+    return http_response("HTTP/1.1 204 No Content", {"X-Custom-ID": xcid})
+
 
 def handle(conn, addr):
-    data = conn.recv(8192).decode(errors="ignore")
-    if data:
-        conn.sendall(processar(data))
-    conn.close()
+    try:
+        data = conn.recv(16384).decode(errors="ignore")
+        if not data:
+            return
+
+        lines = data.split("\r\n")
+        request_line = lines[0] if lines else ""
+        parts = request_line.split()
+        method = parts[0] if len(parts) >= 1 else "GET"
+
+        # Extrai X-Custom-ID
+        xcid = None
+        for line in lines[1:]:
+            if line.lower().startswith("x-custom-id:"):
+                xcid = line.split(":", 1)[1].strip()
+                break
+
+        if method not in ALLOWED:
+            resp = build_method_not_allowed()
+        elif method == "OPTIONS":
+            resp = build_options(xcid or "N/A")
+        elif not xcid:
+            resp = build_bad_request("Cabeçalho obrigatório X-Custom-ID ausente.")
+        else:
+            resp = build_ok(method, xcid)
+
+        conn.sendall(resp)
+    finally:
+        conn.close()
+
 
 def main():
+    print(f"🚀 Servidor Concorrente (threads) em {HOST}:{PORT}")
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     s.bind((HOST, PORT))
-    s.listen(64)
-    print(f"🚀 Servidor CONCORRENTE ativo em {HOST}:{PORT}")
+    s.listen(128)
     while True:
         conn, addr = s.accept()
         threading.Thread(target=handle, args=(conn, addr), daemon=True).start()
+
 
 if __name__ == "__main__":
     main()

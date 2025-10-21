@@ -1,42 +1,48 @@
-import pandas as pd
+import csv
+from collections import defaultdict
+import matplotlib
+matplotlib.use("Agg")  # headless
 import matplotlib.pyplot as plt
-import numpy as np
+import os
 
-# Carrega o CSV de resultados
-df = pd.read_csv("resultados/resultados.csv")
+CSV_PATH = "resultados/resultados.csv"
+OUT_PATH = "resultados/grafico_latency.png"
 
-# Ordena os métodos na ordem natural HTTP
-ordem_metodos = ["GET", "POST", "PUT", "DELETE"]
-df["Metodo"] = pd.Categorical(df["Metodo"], categories=ordem_metodos, ordered=True)
-df = df.sort_values(["Metodo", "Servidor"])
+# Carrega CSV
+data = defaultdict(dict)
+with open(CSV_PATH, "r", encoding="utf-8") as f:
+    reader = csv.DictReader(f)
+    for row in reader:
+        srv = row["Servidor"]
+        metodo = row["Metodo"]
+        media = float(row["Media"])
+        desv = float(row["DesvioPadrao"])
+        data[metodo][srv] = (media, desv)
 
-# Cores e posição
-largura = 0.35
-metodos = df["Metodo"].unique()
-x = np.arange(len(metodos))
+metodos = ["GET", "POST", "PUT", "DELETE"]
+servs = ["Sequencial", "Concorrente"]
 
-# Extrai valores de cada servidor
-seq = df[df["Servidor"] == "Sequencial"]["Media"]
-conc = df[df["Servidor"] == "Concorrente"]["Media"]
+# Monta gráfico de barras com barras de erro (σ)
+fig, ax = plt.subplots(figsize=(8, 4.5), dpi=140)
+x = range(len(metodos))
+width = 0.35
 
-plt.figure(figsize=(8,5))
-plt.bar(x - largura/2, seq, largura, label="Sequencial", color="#ff9933")
-plt.bar(x + largura/2, conc, largura, label="Concorrente", color="#3399ff")
+seq_means = [data[m].get("Sequencial", (0, 0))[0] for m in metodos]
+seq_errs  = [data[m].get("Sequencial", (0, 0))[1] for m in metodos]
+con_means = [data[m].get("Concorrente", (0, 0))[0] for m in metodos]
+con_errs  = [data[m].get("Concorrente", (0, 0))[1] for m in metodos]
 
-# Rótulos de valor acima das barras
-for i, v in enumerate(seq):
-    plt.text(i - largura/2, v + 0.00002, f"{v:.4f}", ha='center', fontsize=8)
-for i, v in enumerate(conc):
-    plt.text(i + largura/2, v + 0.00002, f"{v:.4f}", ha='center', fontsize=8)
+ax.bar([i - width/2 for i in x], seq_means, width, yerr=seq_errs, label="Sequencial", capsize=3)
+ax.bar([i + width/2 for i in x], con_means, width, yerr=con_errs, label="Concorrente", capsize=3)
 
-plt.xticks(x, metodos)
-plt.ylabel("Latência média (s)")
-plt.xlabel("Método HTTP")
-plt.title("Comparação de desempenho – Servidor Sequencial vs Concorrente")
-plt.legend()
-plt.grid(axis="y", linestyle="--", alpha=0.4)
+ax.set_xticks(list(x))
+ax.set_xticklabels(metodos)
+ax.set_ylabel("Latência média (s)")
+ax.set_title("Comparativo de Latência — Média ± σ (N execuções)")
+ax.legend()
+ax.grid(axis="y", alpha=0.25)
+
+os.makedirs("resultados", exist_ok=True)
 plt.tight_layout()
-plt.savefig("resultados/grafico_comparativo.png", dpi=150)
-plt.show()
-
-print("✅ Gráfico salvo em resultados/grafico_comparativo.png")
+plt.savefig(OUT_PATH)
+print(f"✅ Gráfico salvo em {OUT_PATH}")
