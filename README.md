@@ -27,7 +27,6 @@ Trabalho-Redes-2/
 ├── concurrent_server.py       # Servidor Concorrente (porta 8081)
 ├── client.py                  # Cliente automatizado de testes (gera CSV)
 │
-├── index.html                 # Painel Web (interface para requisições e métricas)
 └── resultados/                # Pasta onde o CSV é salvo automaticamente
 ```
 
@@ -39,7 +38,6 @@ Trabalho-Redes-2/
 - **HTTP via TCP** — estrutura manual de requisições e respostas
 - **Docker + Docker Compose** — isolamento e rede simulada
 - **Bash Script (main.sh)** — automação da execução
-- **HTML + JavaScript** — interface de testes (index.html)
 - **SHA-1** — geração do cabeçalho criptográfico X-Custom-ID
 
 ---
@@ -127,31 +125,23 @@ Os resultados também serão salvos em:
 resultados/resultados.csv
 ```
 
-### 3. Rodar o painel web (manual)
-
-Após rodar o `main.sh`, abra manualmente o arquivo `index.html` no navegador.
-
-> **Dica:** Se usar o VS Code, clique em "Go Live" (extensão Live Server) e acesse `http://127.0.0.1:5500/index.html`.
-
-O painel permite:
-
-- enviar requisições GET, POST, PUT e DELETE
-- medir o tempo médio, desvio padrão, mínimo e máximo
-- exportar um CSV das métricas direto pelo navegador
-
-> **Importante:**  
-> O `index.html` não é aberto automaticamente pelo script `main.sh`.  
-> Ele deve ser aberto manualmente no navegador após o ambiente estar em execução.
-
 ---
 
 ## Métricas Geradas
 
-O cliente e o painel web medem automaticamente o tempo de cada requisição e salvam as estatísticas:
+O cliente mede automaticamente o desempenho de cada requisição e calcula as seguintes métricas:
+
+- **Tempo Médio (s)** — média aritmética dos tempos de resposta
+- **Desvio Padrão (s)** — dispersão dos tempos em relação à média
+- **Tempo Mínimo (s)** — menor tempo de resposta observado
+- **Tempo Máximo (s)** — maior tempo de resposta observado
+- **Throughput (req/s)** — número de requisições processadas por segundo
+
+Exemplo do arquivo CSV gerado:
 ```csv
-Servidor,Metodo,Media,DesvioPadrao,Min,Max,N
-Sequencial,GET,0.001500,0.000210,0.001200,0.001700,30
-Concorrente,POST,0.000800,0.000150,0.000600,0.001000,30
+Servidor,Metodo,Media,DesvioPadrao,Min,Max,Throughput,N
+Sequencial,GET,0.001500,0.000210,0.001200,0.001700,666.67,30
+Concorrente,POST,0.000800,0.000150,0.000600,0.001000,1250.00,30
 ```
 
 Essas informações são usadas no relatório para análise comparativa entre os dois servidores.
@@ -168,7 +158,7 @@ Access-Control-Allow-Headers: Content-Type, X-Custom-ID
 Access-Control-Expose-Headers: X-Custom-ID, Content-Type, Content-Length
 ```
 
-Isso garante compatibilidade com o navegador (CORS liberado) e funcionamento do `index.html`.
+Isso garante compatibilidade com diferentes clientes e facilita a integração.
 
 ---
 
