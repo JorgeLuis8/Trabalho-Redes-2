@@ -1,26 +1,56 @@
 import socket
+from email.utils import formatdate  # para gerar 'Date' RFC 1123
 
 HOST = "0.0.0.0"
 PORT = 80
 ALLOWED = {"GET", "POST", "PUT", "DELETE", "OPTIONS"}
 
+# 🔧 Cabeçalhos CORS e de servidor usados em TODAS as respostas
+BASE_HEADERS = {
+    # Identidade do servidor + conexão
+    "Server": "Sequencial/1.0",
+    "Connection": "close",
+
+    # CORS (permite o fetch do browser ver os cabeçalhos abaixo)
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type, X-Custom-ID",
+    # Liste aqui TUDO que você deseja ler via resp.headers.* no front
+    "Access-Control-Expose-Headers": (
+        "X-Custom-ID, Content-Type, Content-Length, Date, Server, "
+        "Access-Control-Allow-Origin, Access-Control-Allow-Methods, "
+        "Access-Control-Allow-Headers, Access-Control-Expose-Headers, Allow"
+    ),
+}
 
 def http_response(status_line: str, headers: dict, body: str = "") -> bytes:
-    # 🔹 Cabeçalhos CORS obrigatórios
-    cors_headers = {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type, X-Custom-ID",
-        "Access-Control-Expose-Headers": "X-Custom-ID, Content-Type, Content-Length",
-    }
-    headers.update(cors_headers)
+    """
+    Monta resposta HTTP.
+    - Garante Date/Server/Connection.
+    - Aplica CORS e lista de exposed headers.
+    - Garante Content-Length e Content-Type coerentes (text/html).
+    """
+    # copia para não mutar o dicionário recebido
+    out_headers = dict(headers or {})
+    # sempre define Date atual
+    out_headers["Date"] = formatdate(usegmt=True)
+    # aplica base (CORS + server + connection)
+    for k, v in BASE_HEADERS.items():
+        out_headers.setdefault(k, v)
 
-    head = status_line + "\r\n" + "".join(f"{k}: {v}\r\n" for k, v in headers.items())
+    # Se houver body, define tipo e tamanho
     if body:
-        head += f"Content-Length: {len(body.encode('utf-8'))}\r\n"
-        head += "Content-Type: text/html; charset=utf-8\r\n"
-    head += "Connection: close\r\n\r\n"
-    return (head + body).encode("utf-8")
+        out_headers["Content-Type"] = out_headers.get("Content-Type", "text/html; charset=utf-8")
+        out_headers["Content-Length"] = str(len(body.encode("utf-8")))
+    else:
+        # Sem body → tamanho 0 (inclusive para 204)
+        out_headers["Content-Length"] = out_headers.get("Content-Length", "0")
+        # definir Content-Type não é obrigatório sem body, mas não faz mal:
+        out_headers.setdefault("Content-Type", "text/html; charset=utf-8")
+
+    # monta head+body
+    head = status_line + "\r\n" + "".join(f"{k}: {v}\r\n" for k, v in out_headers.items()) + "\r\n"
+    return (head + (body or "")).encode("utf-8")
 
 
 def build_ok(method: str, xcid: str) -> bytes:
@@ -36,12 +66,23 @@ def build_bad_request(msg: str) -> bytes:
 
 def build_method_not_allowed() -> bytes:
     body = "<h1>405 Method Not Allowed</h1>"
-    return http_response("HTTP/1.1 405 Method Not Allowed", {}, body)
+    # Inclui Allow para deixar claro o que é aceito
+    return http_response(
+        "HTTP/1.1 405 Method Not Allowed",
+        {"Allow": ", ".join(sorted(ALLOWED))},
+        body
+    )
 
 
 def build_options(xcid: str) -> bytes:
-    return http_response("HTTP/1.1 204 No Content", {"X-Custom-ID": xcid})
-
+    # Preflight / OPTIONS: sem corpo, mas com Allow + Max-Age para navegadores
+    headers = {
+        "X-Custom-ID": xcid,
+        "Allow": ", ".join(sorted(ALLOWED)),
+        "Access-Control-Max-Age": "600",  # 10 min de cache do preflight
+    }
+    # 204 No Content, Content-Length: 0
+    return http_response("HTTP/1.1 204 No Content", headers, body="")
 
 def handle(conn, addr):
     data = conn.recv(16384).decode(errors="ignore")
