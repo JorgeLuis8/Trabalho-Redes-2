@@ -24,6 +24,7 @@ os.makedirs("resultados", exist_ok=True)
 CSV_PATH = "resultados/resultados.csv"
 
 
+# ================== FUNÇÕES AUXILIARES ==================
 def http_request(method: str, host: str, port: int, body: bytes = b"") -> bytes:
     """Monta e envia uma requisição HTTP via sockets TCP e retorna bytes da resposta."""
     req_lines = [
@@ -135,10 +136,11 @@ def testar_concorrente(srv_name, host, port, method, n_runs, n_threads):
     return times, amostra
 
 
+# ================== EXECUÇÃO PRINCIPAL ==================
 def main():
     wait_ready()
     with open(CSV_PATH, "w", encoding="utf-8") as f:
-        f.write("Servidor,Metodo,Media,DesvioPadrao,Min,Max,N\n")
+        f.write("Servidor,Metodo,Media,DesvioPadrao,Min,Max,N,Throughput\n")
 
     for srv_name, (host, port) in TARGETS.items():
         print(f"\n==================== TESTANDO SERVIDOR {srv_name} ====================")
@@ -153,9 +155,14 @@ def main():
             if times:
                 media = sum(times) / len(times)
                 desvio = statistics.pstdev(times)
-                print(f"{srv_name} - {method}: média={media:.5f}s | σ={desvio:.5f}s | min={min(times):.5f}s | max={max(times):.5f}s")
+                total_time = sum(times)
+                throughput = len(times) / total_time  # 🔹 requisições por segundo
+
+                print(f"{srv_name} - {method}: média={media:.5f}s | σ={desvio:.5f}s | "
+                      f"min={min(times):.5f}s | max={max(times):.5f}s | throughput={throughput:.2f} req/s")
+
                 with open(CSV_PATH, "a", encoding="utf-8") as f:
-                    f.write(f"{srv_name},{method},{media:.6f},{desvio:.6f},{min(times):.6f},{max(times):.6f},{len(times)}\n")
+                    f.write(f"{srv_name},{method},{media:.6f},{desvio:.6f},{min(times):.6f},{max(times):.6f},{len(times)},{throughput:.2f}\n")
 
     print(f"\n✅ Resultados salvos em {CSV_PATH}")
     print("📎 X-Custom-ID usado:", CUSTOM_ID)

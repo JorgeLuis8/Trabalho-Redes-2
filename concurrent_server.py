@@ -45,6 +45,8 @@ def build_options(xcid: str) -> bytes:
 
 
 def handle(conn, addr):
+    print(f"🧵 Thread {threading.current_thread().name} atendendo {addr}")
+
     try:
         data = conn.recv(16384).decode(errors="ignore")
         if not data:
