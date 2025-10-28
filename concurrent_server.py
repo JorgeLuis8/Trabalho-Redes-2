@@ -1,22 +1,20 @@
 import socket
 import threading
-from email.utils import formatdate  # gera Date em RFC 1123
+from email.utils import formatdate  
 
 HOST = "0.0.0.0"
 PORT = 80
 ALLOWED = {"GET", "POST", "PUT", "DELETE", "OPTIONS"}
 
-# 🔧 Cabeçalhos base (CORS + identidade) aplicados em TODAS as respostas
 BASE_HEADERS = {
     "Server": "Concorrente/1.0",
     "Connection": "close",
 
-    # CORS
+    # 
     "Access-Control-Allow-Origin": "*",
     "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
     "Access-Control-Allow-Headers": "Content-Type, X-Custom-ID",
 
-    # Expor no fetch() tudo que queremos enxergar no front
     "Access-Control-Expose-Headers": (
         "X-Custom-ID, Content-Type, Content-Length, Date, Server, "
         "Access-Control-Allow-Origin, Access-Control-Allow-Methods, "
@@ -25,14 +23,9 @@ BASE_HEADERS = {
 }
 
 def http_response(status_line: str, headers: dict, body: str = "") -> bytes:
-    """
-    Monta uma resposta HTTP consistente:
-      - Adiciona Date, Server, Connection.
-      - Aplica CORS e lista de exposed headers.
-      - Garante Content-Length e Content-Type coerentes.
-    """
+
     out = dict(headers or {})
-    out["Date"] = formatdate(usegmt=True)  # sempre atual
+    out["Date"] = formatdate(usegmt=True)  
     for k, v in BASE_HEADERS.items():
         out.setdefault(k, v)
 
@@ -67,7 +60,6 @@ def build_method_not_allowed() -> bytes:
 
 
 def build_options(xcid: str) -> bytes:
-    # Preflight sem corpo; cacheia por 10 min
     return http_response(
         "HTTP/1.1 204 No Content",
         {
@@ -92,7 +84,6 @@ def handle(conn: socket.socket, addr):
         parts = request_line.split()
         method = parts[0] if len(parts) >= 1 else "GET"
 
-        # Extrai X-Custom-ID
         xcid = None
         for line in lines[1:]:
             if line.lower().startswith("x-custom-id:"):
@@ -110,7 +101,6 @@ def handle(conn: socket.socket, addr):
 
         conn.sendall(resp)
     except Exception as e:
-        # Resposta simples em caso de erro inesperado
         try:
             conn.sendall(http_response("HTTP/1.1 500 Internal Server Error", {}, f"<h1>500</h1><p>{e}</p>"))
         except Exception:

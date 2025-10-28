@@ -1,7 +1,7 @@
 import csv
 from collections import defaultdict
 import matplotlib
-matplotlib.use("Agg")  # Para ambientes sem GUI
+matplotlib.use("Agg") 
 import matplotlib.pyplot as plt
 import os
 
@@ -9,7 +9,6 @@ CSV_PATH = "resultados/resultados.csv"
 OUT_PATH_LAT = "resultados/grafico_latency.png"
 OUT_PATH_THR = "resultados/grafico_throughput.png"
 
-# ===== Carrega CSV =====
 data = defaultdict(dict)
 throughput_data = defaultdict(dict)
 
@@ -28,7 +27,6 @@ metodos = ["GET", "POST", "PUT", "DELETE"]
 x = range(len(metodos))
 width = 0.35
 
-# ===== Gráfico 1 — Latência =====
 fig, ax = plt.subplots(figsize=(8, 4.5), dpi=140)
 seq_means = [data[m].get("Sequencial", (0, 0))[0] for m in metodos]
 seq_errs = [data[m].get("Sequencial", (0, 0))[1] for m in metodos]
@@ -46,7 +44,6 @@ ax.grid(axis="y", alpha=0.25)
 plt.tight_layout()
 plt.savefig(OUT_PATH_LAT)
 
-# ===== Gráfico 2 — Throughput =====
 fig, ax2 = plt.subplots(figsize=(8, 4.5), dpi=140)
 seq_thr = [throughput_data[m].get("Sequencial", 0) for m in metodos]
 con_thr = [throughput_data[m].get("Concorrente", 0) for m in metodos]
@@ -62,4 +59,4 @@ ax2.grid(axis="y", alpha=0.25)
 plt.tight_layout()
 plt.savefig(OUT_PATH_THR)
 
-print(f"✅ Gráficos salvos em:\n - {OUT_PATH_LAT}\n - {OUT_PATH_THR}")
+print(f" Gráficos salvos em:\n - {OUT_PATH_LAT}\n - {OUT_PATH_THR}")

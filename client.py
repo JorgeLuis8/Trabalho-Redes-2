@@ -5,12 +5,10 @@ import os
 import hashlib
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
-# ===== Identificação exigida =====
 MATRICULA = "20219040840"
 NOME = "Jorge Luis Ferreira Luz"
 CUSTOM_ID = hashlib.sha1(f"{MATRICULA} {NOME}".encode()).hexdigest()
 
-# ===== Alvos na rede Docker 8.40.0.0/24 =====
 TARGETS = {
     "Sequencial": ("8.40.0.10", 80),
     "Concorrente": ("8.40.0.11", 80),
@@ -18,15 +16,13 @@ TARGETS = {
 
 METHODS = ["GET", "POST", "PUT", "DELETE"]
 N_RUNS = int(os.getenv("N_RUNS", "30"))
-N_THREADS = int(os.getenv("N_THREADS", "10"))  # Só usado para o servidor concorrente
+N_THREADS = int(os.getenv("N_THREADS", "10"))  
 
 os.makedirs("resultados", exist_ok=True)
 CSV_PATH = "resultados/resultados.csv"
 
 
-# ================== FUNÇÕES AUXILIARES ==================
 def http_request(method: str, host: str, port: int, body: bytes = b"") -> bytes:
-    """Monta e envia uma requisição HTTP via sockets TCP e retorna bytes da resposta."""
     req_lines = [
         f"{method} / HTTP/1.1",
         f"Host: {host}",
@@ -92,7 +88,6 @@ def print_sample(resp_bytes: bytes):
 
 
 def medir_requisicao(method, host, port, body):
-    """Executa uma única requisição e mede o tempo de resposta."""
     try:
         t0 = time.perf_counter()
         resp = http_request(method, host, port, body=body)
@@ -104,7 +99,6 @@ def medir_requisicao(method, host, port, body):
 
 
 def testar_sequencial(srv_name, host, port, method, n_runs):
-    """Executa requisições uma por uma (modo normal)."""
     times = []
     amostra = None
     body = b"mensagem de teste" if method in ("POST", "PUT") else b""
@@ -119,7 +113,6 @@ def testar_sequencial(srv_name, host, port, method, n_runs):
 
 
 def testar_concorrente(srv_name, host, port, method, n_runs, n_threads):
-    """Executa requisições simultâneas com threads (modo concorrente)."""
     times = []
     amostra = None
     body = b"mensagem de teste" if method in ("POST", "PUT") else b""
@@ -136,7 +129,6 @@ def testar_concorrente(srv_name, host, port, method, n_runs, n_threads):
     return times, amostra
 
 
-# ================== EXECUÇÃO PRINCIPAL ==================
 def main():
     wait_ready()
     with open(CSV_PATH, "w", encoding="utf-8") as f:
@@ -156,7 +148,7 @@ def main():
                 media = sum(times) / len(times)
                 desvio = statistics.pstdev(times)
                 total_time = sum(times)
-                throughput = len(times) / total_time  # 🔹 requisições por segundo
+                throughput = len(times) / total_time  
 
                 print(f"{srv_name} - {method}: média={media:.5f}s | σ={desvio:.5f}s | "
                       f"min={min(times):.5f}s | max={max(times):.5f}s | throughput={throughput:.2f} req/s")

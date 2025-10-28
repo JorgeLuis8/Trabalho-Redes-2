@@ -7,6 +7,14 @@
 
 ---
 
+##  Vídeo de Explicação
+
+**Link do YouTube:** [Clique aqui para assistir](URL_DO_VIDEO_AQUI)
+
+> Vídeo demonstrando a execução do projeto, funcionamento dos servidores e análise dos resultados obtidos.
+
+---
+
 ## Objetivo
 
 Implementar dois servidores web — **Sequencial** e **Concorrente** — para comparar desempenho e comportamento entre abordagens síncrona e paralela.
